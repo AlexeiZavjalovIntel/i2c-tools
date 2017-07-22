@@ -1,0 +1,51 @@
+#!/bin/bash
+
+REG_SIZE=$1
+BUS=$2
+I2C_ADDR=$3
+REG_ADDR=$4
+
+I2CSET="i2cset"
+I2CGET="i2cget"
+
+print_usage() {
+  echo "i2cread [-REG_SIZE] BUS I2C_ADDR REG_ADDR"
+}
+
+if [[ $# -eq 4 ]]; then
+  REG_SIZE=$1
+  BUS=$2
+  I2C_ADDR=$3
+  REG_ADDR=$4
+elif [[ $# -eq 3 ]]; then
+  REG_SIZE="-8"
+  BUS=$1
+  I2C_ADDR=$2
+  REG_ADDR=$3
+else
+  echo "ERROR: Incorrect number of aruments"
+  print_usage
+  exit 1
+fi
+
+INV=false
+WIDTH=1
+case $REG_SIZE in
+  "-8") WIDTH=1;;
+  "-16") WIDTH=2;;
+  "-24") WIDTH=3;;
+  "-32") WIDTH=4;;
+esac
+
+# 0x0000 case
+if [ ${#REG_ADDR} == 6 ]; then
+  $I2CSET -y -f ${BUS} ${I2C_ADDR} 0x${REG_ADDR:2:2} 0x${REG_ADDR:4:2}
+  REG_VAL="0x"
+  for BYTE in `seq 1 ${WIDTH}`; do
+    READ=`$I2CGET -y -f ${BUS} ${I2C_ADDR}`
+    REG_VAL=${REG_VAL}${READ:2}
+  done
+  echo ${REG_VAL}
+elif [ ${#REG_ADDR} == 4 ]; then
+  $I2CGET -y -f ${BUS} ${I2C_ADDR} ${REG_ADDR}
+fi
